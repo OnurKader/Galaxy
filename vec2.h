@@ -5,11 +5,28 @@
 class vec2 final
 {
 public:
+	float x {0.f};
+	float y {0.f};
+
 	constexpr vec2() = default;
 
-	constexpr vec2(float x, float y) : x(x), y(y) {}
+	constexpr vec2(float x, float y) : x {x}, y {y} {}
 
 	constexpr explicit vec2(float k) : x {k}, y {k} {}
+
+	constexpr vec2(const vec2&) = default;
+	constexpr vec2(vec2&&) noexcept = default;
+
+	constexpr vec2& operator=(const vec2&) = default;
+	constexpr vec2& operator=(vec2&&) noexcept = default;
+
+	constexpr vec2& operator=(float val)
+	{
+		x = val;
+		y = val;
+
+		return *this;
+	}
 
 	constexpr auto operator<=>(const vec2&) const = default;
 
@@ -63,8 +80,4 @@ public:
 	}
 
 	friend constexpr vec2 operator*(float k, const vec2& v) { return v * k; }
-
-private:
-	float x {0.f};
-	float y {0.f};
 };

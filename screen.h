@@ -1,36 +1,43 @@
 #pragma once
+
+#include <algorithm>
 #include <cmath>
-#include <cstdint>
 #include <cstdio>
-#include <ncurses.h>
 #include <sys/ioctl.h>
 #include <unistd.h>
 
-constexpr std::size_t WIDTH = 950;
-constexpr std::size_t HEIGHT = 670;
+constexpr std::uint16_t WIDTH = 950;
+constexpr std::uint16_t HEIGHT = 670;
 
-constexpr std::size_t dW = 8;
-constexpr std::size_t dH = 8;
+constexpr std::uint16_t dW = 8;
+constexpr std::uint16_t dH = 8;
+
+constexpr std::size_t index(std::size_t row, std::size_t col, std::size_t width = WIDTH)
+{
+	return (row * width + col);
+}
+
+constexpr std::size_t index(int row, int col, std::size_t width = WIDTH)
+{
+	if(row < 0 || col < 0)
+		return 0;
+
+	const auto row_ul = static_cast<std::size_t>(row);
+	const auto col_ul = static_cast<std::size_t>(col);
+
+	return (row_ul * width + col_ul);
+}
 
 class Screen
 {
 public:
-	explicit Screen(float x, float y, int z) : x(x), y(y), zoom(z)
+	explicit Screen(float x, float y, float z) : x(x), y(y), zoom(z)
 	{
 		Setup();
 		Clear();
 	}
 
-	void Clear()
-	{
-		for(int i = 0; i < HEIGHT; i++)
-		{
-			for(int j = 0; j < WIDTH; j++)
-			{
-				canvas[i][j] = false;
-			}
-		}
-	}
+	void Clear() { std::fill(std::begin(canvas), std::end(canvas), false); }
 
 	void PlotPoint(float x, float y)
 	{
@@ -86,41 +93,40 @@ public:
 
 	void Draw()
 	{
+		// TODO: Change this to a 1D array as well
 		char frame[HEIGHT / dH][WIDTH / dW + 1];
+
 		for(int i = 0; i < HEIGHT / dH - 1; ++i)
-		{
 			frame[i][WIDTH / dW] = '\n';
-		}
+
 		frame[HEIGHT / dH - 1][WIDTH / dW] = '\0';
 
-		for(int i = 0; i < HEIGHT / dH; i++)
+		for(std::size_t i = 0; i < HEIGHT / dH; i++)
 		{
-			for(int j = 0; j < WIDTH / dW; j++)
+			for(std::size_t j = 0; j < WIDTH / dW; j++)
 			{
-				int count = 0;
+				std::size_t count = 0;
 
 				// calculating brightness
-				for(int k = 0; k < dH; k++)
-				{
-					for(int l = 0; l < dW; l++)
-					{
-						count += canvas[dH * i + k][dW * j + l];
-					}
-				}
+				for(std::size_t k = 0; k < dH; k++)
+					for(std::size_t l = 0; l < dW; l++)
+						count += canvas[index(dH * i + k, dW * j + l)];
+
 				frame[i][j] = brightness(count);
 			}
 		}
 		// borders
-		for(int i = 0; i < HEIGHT / dH; ++i)
+		for(std::size_t i = 0; i < HEIGHT / dH; ++i)
 		{
 			frame[i][0] = '@';
 			frame[i][WIDTH / dW - 1] = '@';
 		}
-		for(int j = 0; j < WIDTH / dW; ++j)
+		for(std::size_t j = 0; j < WIDTH / dW; ++j)
 		{
 			frame[0][j] = '@';
 			frame[HEIGHT / dH - 1][j] = '@';
 		}
+
 		FillScreenWithString(frame[0]);
 	}
 
@@ -128,14 +134,14 @@ public:
 
 	int Width() const { return HEIGHT; }
 
-	void set_palette(int palette) { this->_palette = palette; }
+	void set_palette(std::size_t palette) { this->_palette = palette; }
 
 private:
-	bool canvas[HEIGHT][WIDTH];
+	bool canvas[HEIGHT * WIDTH];
 	float x = 0;
 	float y = 0;
 	float zoom = 1;
-	int _palette = 0;
+	std::size_t _palette = 0;
 
 	void Setup();
 	void FillScreenWithString(const char* frame);
@@ -155,10 +161,9 @@ private:
 	void drawPoint(int A, int B)
 	{
 		if(A < 0 || B < 0 || A >= HEIGHT || B >= WIDTH)
-		{
 			return;
-		}
-		canvas[A][B] = true;
+
+		canvas[index(A, B)] = true;
 	}
 
 	void drawBoldPoint(int A, int B)
@@ -275,18 +280,18 @@ private:
 		}
 	}
 
-	char brightness(int count) const
+	char brightness(std::size_t count) const
 	{
 		static const struct
 		{
-			int n;
+			std::size_t n;
 			const char s[11];
 		} p[] = {
 			{10, " .,:;oOQ#@"},
 			{10, "     .oO@@"},
 			{3, " .:"},
 		};
-		if(0 <= _palette && _palette <= 2)
+		if(_palette <= 2)
 		{
 			const auto& pal = p[_palette];
 			return pal.s[count * (pal.n - 1) / dW / dH];
@@ -298,17 +303,17 @@ private:
 	}
 };
 
-inline int termHeight = 24;
-inline int termWidth = 80;
+inline std::uint16_t termHeight = 24;
+inline std::uint16_t termWidth = 80;
 
 inline void Screen::FillScreenWithString(const char* frame)
 {
-	const int h = std::min(termHeight, int(HEIGHT / dH));
-	const int linewidth = (WIDTH / dW + 1);
-	for(int r = 0; r < h; ++r)
+	const auto h = std::min(termHeight, static_cast<std::uint16_t>(HEIGHT / dH));
+	const auto linewidth = (WIDTH / dW) + 1U;
+	for(std::size_t r = 0; r < h; ++r)
 	{
 		const char* line = &frame[r * linewidth];
-		fprintf(stdout, "\033[%d;1H", r);
+		fprintf(stdout, "\033[%zu;1H", r);
 		fwrite(line, 1, linewidth, stdout);
 	}
 	fflush(stdout);
