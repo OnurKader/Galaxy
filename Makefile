@@ -1,4 +1,4 @@
-CXXFLAGS=-std=c++17
+CXXFLAGS= -std=c++2a -O3
 
 all: ThreeBody Sun-Earth-Moon Collision
 
@@ -15,3 +15,4 @@ clean:
 	rm -f ThreeBody Sun-Earth-Moon Collision
 
 .PHONY: clean
+
