@@ -1,0 +1,11 @@
+Collision
+ThreeBody
+Sun-Earth-Moon
+*.cflags
+*.config
+*.creator
+*.user
+*.cxxflags
+*.files
+*.includes
+
